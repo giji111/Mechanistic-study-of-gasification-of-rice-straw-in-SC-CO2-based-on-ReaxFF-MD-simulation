@@ -1,0 +1,39 @@
+
+variable inname string "in"
+variable basename string "s1"
+units		real
+atom_style	full
+boundary p p p
+ 
+read_data	s1.data
+
+pair_style	reaxff NULL 
+pair_coeff  * * ffield.reax.cho O C H O H C O O C C H C O
+
+compute  reax all pair reaxff
+variable eb equal c_reax[1]
+variable eqeq equal c_reax[14]
+
+fix reax_qeq    all qeq/reax 1 0.0 10.0 1e-6 reaxff
+
+minimize   1e-4 1e-6 1000 1000
+
+reset_timestep 0 
+fix reax_out_species    all reaxff/species 100 50 5000 s1.species.out 
+fix reax_out_bonds      all reaxff/bonds 5000 s1.bonds.out.gz
+
+neighbor	3.0 bin
+neigh_modify	every 500 delay  0 check no
+
+thermo          5000
+thermo_style    custom step temp etotal v_eb v_eqeq spcpu cpuremain
+dump   1 all custom 100 s1.lammpstrj id type x y z
+
+log             s1.log
+
+fix 1 all nvt temp 4500.0 4500.0 450.0 
+
+timestep	0.1
+
+run 5000000
+write_data     s1.data
